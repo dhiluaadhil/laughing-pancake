@@ -1,50 +1,68 @@
 import { useEffect, useRef } from 'react';
-import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
 
-let socketInstance = null;
-
+/**
+ * useSocket (now SSE-based — replaces socket.io-client).
+ *
+ * Connects to /api/notifications/stream via Server-Sent Events.
+ * The JWT is passed as a ?token= query param because EventSource
+ * cannot set custom Authorization headers.
+ *
+ * @param {function} onNotification - Callback invoked with each new notification
+ */
 export function useSocket(onNotification) {
   const { user } = useAuth();
   const callbackRef = useRef(onNotification);
   callbackRef.current = onNotification;
+  const esRef = useRef(null);
 
   useEffect(() => {
     if (!user) return;
 
-    if (!socketInstance) {
-      socketInstance = io(SOCKET_URL, { transports: ['websocket'] });
-    }
+    const token = localStorage.getItem('campuslink_token');
 
-    socketInstance.emit('join', user.id);
+    if (!token) return;
 
-    const handleNotification = (notif) => {
-      callbackRef.current?.(notif);
+    const url = `${API_URL}/api/notifications/stream?token=${encodeURIComponent(token)}`;
+    const es = new EventSource(url);
+    esRef.current = es;
 
-      const messages = {
-        like:    `❤️ ${notif.actor?.username} liked your post`,
-        comment: `💬 ${notif.actor?.username} commented on your post`,
-        follow:  `👥 ${notif.actor?.username} started following you`,
-      };
+    es.addEventListener('notification', (event) => {
+      try {
+        const notif = JSON.parse(event.data);
+        callbackRef.current?.(notif);
 
-      toast(messages[notif.type] || 'You have a new notification', {
-        style: {
-          background: '#1e1b4b',
-          color: '#e0e7ff',
-          border: '1px solid #4f46e5',
-          borderRadius: '12px',
-          padding: '12px 16px',
-        },
-        duration: 4000,
-      });
+        const messages = {
+          like:    `❤️ ${notif.actor_username} liked your post`,
+          comment: `💬 ${notif.actor_username} commented on your post`,
+          follow:  `👥 ${notif.actor_username} started following you`,
+        };
+
+        toast(messages[notif.type] || 'You have a new notification', {
+          style: {
+            background: '#1e1b4b',
+            color: '#e0e7ff',
+            border: '1px solid #4f46e5',
+            borderRadius: '12px',
+            padding: '12px 16px',
+          },
+          duration: 4000,
+        });
+      } catch { /* ignore parse errors */ }
+    });
+
+    es.addEventListener('error', () => {
+      // EventSource auto-reconnects on error — no manual handling needed
+    });
+
+    return () => {
+      es.close();
+      esRef.current = null;
     };
-
-    socketInstance.on('notification', handleNotification);
-    return () => { socketInstance?.off('notification', handleNotification); };
   }, [user]);
 
-  return socketInstance;
+  return null; // No longer returning a socket instance (not needed)
 }

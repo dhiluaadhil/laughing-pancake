@@ -8,6 +8,7 @@ import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
+import { FiInbox, FiStar, FiZap, FiGrid } from 'react-icons/fi';
 
 /* ── Right sidebar: suggested clubs ── */
 function RightSidebar() {
@@ -24,7 +25,9 @@ function RightSidebar() {
   return (
     <aside className="right-sidebar">
       <div className="card">
-        <h3 style={{ marginBottom: 16 }}>🏛️ Clubs you might like</h3>
+        <h3 style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <FiGrid /> Clubs you might like
+        </h3>
         {clubs.length === 0 && (
           <p className="text-muted text-sm">No suggestions right now</p>
         )}
@@ -91,7 +94,7 @@ function ComposeBox({ onPost }) {
         <form onSubmit={handleSubmit}>
           <textarea
             className="compose-input"
-            placeholder="What's happening on campus? 🎓"
+            placeholder="What's happening on campus?"
             value={caption}
             onChange={(e) => setCaption(e.target.value)}
             maxLength={2000}
@@ -145,7 +148,7 @@ function LatestFeed() {
   if (isLoading) return <div className="spinner" />;
   if (posts.length === 0) return (
     <div className="empty-state">
-      <div className="icon">📭</div>
+      <div className="icon"><FiInbox /></div>
       <h3>No posts yet</h3>
       <p>Be the first to post something!</p>
     </div>
@@ -180,7 +183,7 @@ function ForYouFeed() {
   if (isLoading) return <div className="spinner" />;
   if (posts.length === 0) return (
     <div className="empty-state">
-      <div className="icon">✨</div>
+      <div className="icon"><FiStar /></div>
       <h3>Your feed is empty</h3>
       <p>Follow people or add more interests to see personalized content</p>
     </div>
@@ -216,11 +219,11 @@ export default function Home({ unreadCount = 0 }) {
         <ComposeBox />
 
         <div className="tabs">
-          <button className={`tab-btn ${tab === 'latest' ? 'active' : ''}`} onClick={() => setTab('latest')}>
-            ⚡ Latest
+          <button className={`tab-btn ${tab === 'latest' ? 'active' : ''}`} onClick={() => setTab('latest')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <FiZap /> Latest
           </button>
-          <button className={`tab-btn ${tab === 'foryou' ? 'active' : ''}`} onClick={() => setTab('foryou')}>
-            ✨ For You
+          <button className={`tab-btn ${tab === 'foryou' ? 'active' : ''}`} onClick={() => setTab('foryou')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <FiStar /> For You
           </button>
         </div>
 

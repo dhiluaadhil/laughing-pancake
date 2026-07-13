@@ -1,45 +1,56 @@
-require('dotenv').config();
-const express = require('express');
-const http = require('http');
-const cors = require('cors');
-const socketModule = require('./socket');
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import { logger } from 'hono/logger';
 
-const app = express();
-const server = http.createServer(app);
+import authRoutes          from './routes/auth.js';
+import userRoutes          from './routes/users.js';
+import postRoutes          from './routes/posts.js';
+import feedRoutes          from './routes/feed.js';
+import followRoutes        from './routes/follows.js';
+import likeRoutes          from './routes/likes.js';
+import commentRoutes       from './routes/comments.js';
+import searchRoutes        from './routes/search.js';
+import clubRoutes          from './routes/clubs.js';
+import notificationRoutes  from './routes/notifications.js';
+import adminRoutes         from './routes/admin.js';
 
-// Initialize Socket.io
-socketModule.init(server);
+const app = new Hono();
 
-// ─── Middleware ────────────────────────────────────────────────
-app.use(cors({
-  origin: process.env.CLIENT_URL,
-  credentials: true,
-}));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// ─── Routes ───────────────────────────────────────────────────
-app.use('/api/auth',          require('./routes/auth'));
-app.use('/api/users',         require('./routes/users'));
-app.use('/api/posts',         require('./routes/posts'));
-app.use('/api/feed',          require('./routes/feed'));
-app.use('/api/follows',       require('./routes/follows'));
-app.use('/api/likes',         require('./routes/likes'));
-app.use('/api/comments',      require('./routes/comments'));
-app.use('/api/search',        require('./routes/search'));
-app.use('/api/clubs',         require('./routes/clubs'));
-app.use('/api/notifications', require('./routes/notifications'));
-
-// ─── Health Check ─────────────────────────────────────────────
-app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
-
-// ─── Error Handler ────────────────────────────────────────────
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
+// ─── Middleware ────────────────────────────────────────────────────────────────
+app.use('*', logger());
+app.use('*', async (c, next) => {
+  const corsMiddleware = cors({
+    origin: c.env.CLIENT_URL || '*',
+    allowHeaders: ['Content-Type', 'Authorization'],
+    allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    credentials: true,
+  });
+  return corsMiddleware(c, next);
 });
 
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`🚀 CampusLink backend running on port ${PORT}`);
+// ─── Routes ───────────────────────────────────────────────────────────────────
+app.route('/api/auth',          authRoutes);
+app.route('/api/users',         userRoutes);
+app.route('/api/posts',         postRoutes);
+app.route('/api/feed',          feedRoutes);
+app.route('/api/follows',       followRoutes);
+app.route('/api/likes',         likeRoutes);
+app.route('/api/comments',      commentRoutes);
+app.route('/api/search',        searchRoutes);
+app.route('/api/clubs',         clubRoutes);
+app.route('/api/notifications', notificationRoutes);
+app.route('/api/admin',         adminRoutes);
+
+// ─── Health Check ─────────────────────────────────────────────────────────────
+app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
+
+// ─── 404 Handler ──────────────────────────────────────────────────────────────
+app.notFound((c) => c.json({ error: 'Not found' }, 404));
+
+// ─── Error Handler ────────────────────────────────────────────────────────────
+app.onError((err, c) => {
+  console.error(err);
+  return c.json({ error: err.message || 'Internal Server Error' }, 500);
 });
+
+export default app;

@@ -7,10 +7,25 @@ import CommentSection from '../components/CommentSection';
 import Avatar from '../components/Avatar';
 import PostCard from '../components/PostCard';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
+import { FiTrash2 } from 'react-icons/fi';
 
 export default function PostDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  const deleteMutation = useMutation({
+    mutationFn: () => api.delete(`/posts/${id}`),
+    onSuccess: () => {
+      toast.success('Post deleted');
+      queryClient.invalidateQueries({ queryKey: ['feed'] });
+      navigate(-1);
+    },
+  });
 
   const { data: post, isLoading } = useQuery({
     queryKey: ['post', id],
@@ -58,6 +73,16 @@ export default function PostDetail() {
                 {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
               </div>
             </div>
+            {(user?.id === post.author_id || user?.role === 'admin') && (
+              <button
+                className="action-btn"
+                onClick={() => deleteMutation.mutate()}
+                title="Delete post"
+                style={{ marginLeft: 'auto', color: 'var(--danger)' }}
+              >
+                <FiTrash2 size={18} />
+              </button>
+            )}
           </div>
           <p style={{ fontSize: '1.1rem', lineHeight: 1.7, marginBottom: 16, whiteSpace: 'pre-wrap' }}>
             {post.caption}

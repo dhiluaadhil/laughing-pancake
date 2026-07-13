@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FiArrowLeft, FiEdit2, FiUserPlus, FiUserMinus } from 'react-icons/fi';
+import { FiArrowLeft, FiEdit2, FiUserPlus, FiUserMinus, FiMapPin, FiEdit3 } from 'react-icons/fi';
 import Sidebar from '../components/Sidebar';
 import PostCard from '../components/PostCard';
 import Avatar from '../components/Avatar';
@@ -37,7 +37,7 @@ export default function Profile() {
 
   const followMutation = useMutation({
     mutationFn: () =>
-      followCheck?.following
+      (followCheck?.status === 'accepted' || followCheck?.status === 'pending')
         ? api.delete(`/follows/${profile.id}`)
         : api.post(`/follows/${profile.id}`),
     onSuccess: () => {
@@ -110,17 +110,19 @@ export default function Profile() {
               </button>
             ) : (
               <button
-                className={`btn btn-sm ${followCheck?.following ? 'btn-ghost' : 'btn-primary'}`}
+                className={`btn btn-sm ${followCheck?.status === 'none' ? 'btn-primary' : 'btn-ghost'}`}
                 onClick={() => followMutation.mutate()}
                 disabled={followMutation.isPending}
               >
-                {followCheck?.following ? <><FiUserMinus size={14} /> Unfollow</> : <><FiUserPlus size={14} /> Follow</>}
+                {followCheck?.status === 'accepted' ? <><FiUserMinus size={14} /> Unfollow</> :
+                 followCheck?.status === 'pending'  ? <><FiUserMinus size={14} /> Requested</> :
+                 <><FiUserPlus size={14} /> Follow</>}
               </button>
             )}
           </div>
 
           <h2 style={{ fontSize: '1.2rem' }}>@{profile.username}</h2>
-          {profile.college && <p className="text-muted text-sm">🎓 {profile.college}</p>}
+          {profile.college && <p className="text-muted text-sm" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><FiMapPin size={12}/> {profile.college}</p>}
           {profile.bio && <p style={{ marginTop: 8, fontSize: '0.9rem' }}>{profile.bio}</p>}
 
           <div className="profile-stats" style={{ marginTop: 16 }}>
@@ -163,7 +165,7 @@ export default function Profile() {
         <div>
           {posts.length === 0 ? (
             <div className="empty-state">
-              <div className="icon">📝</div>
+              <div className="icon"><FiEdit3 /></div>
               <h3>No posts yet</h3>
               {isMe && <p>Share your first post!</p>}
             </div>

@@ -1,94 +1,82 @@
-const express = require('express');
-const { z } = require('zod');
-const { v4: uuidv4 } = require('uuid');
-const { query } = require('../db');
-const { authenticate } = require('../middleware/auth');
-const { emitNotification } = require('../socket');
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { createDb } from '../db.js';
+import { authenticate } from '../middleware/auth.js';
 
-const router = express.Router();
+const comments = new Hono();
 
-// ─── POST /api/comments/:postId ────────────────────────────────
-router.post('/:postId', authenticate, async (req, res) => {
+// ─── POST /api/comments/:postId ─────────────────────────────────────────────
+comments.post('/:postId', authenticate, async (c) => {
+  const db = createDb(c.env);
   try {
-    const { body: bodyText } = z.object({ body: z.string().min(1).max(1000) }).parse(req.body);
-    const { postId } = req.params;
-    const userId = req.user.id;
+    const { body: bodyText } = z.object({ body: z.string().min(1).max(1000) }).parse(await c.req.json());
+    const postId = c.req.param('postId');
+    const user = c.get('user');
 
-    // Get post owner
-    const postRes = await query('SELECT user_id FROM posts WHERE id = $1', [postId]);
-    if (!postRes.rows[0]) return res.status(404).json({ error: 'Post not found' });
-    const postOwnerId = postRes.rows[0].user_id;
+    const postRes = await db`SELECT user_id FROM posts WHERE id = ${postId}`;
+    if (!postRes[0]) return c.json({ error: 'Post not found' }, 404);
+    const postOwnerId = postRes[0].user_id;
 
-    const commentId = uuidv4();
-    const { rows } = await query(
-      `INSERT INTO comments (id, user_id, post_id, body)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, body, created_at`,
-      [commentId, userId, postId, bodyText]
-    );
-
-    const comment = {
-      ...rows[0],
-      author_id: req.user.id,
-      username: req.user.username,
-    };
+    const commentId = crypto.randomUUID();
+    const [comment] = await db`
+      INSERT INTO comments (id, user_id, post_id, body)
+      VALUES (${commentId}, ${user.id}, ${postId}, ${bodyText})
+      RETURNING id, body, created_at
+    `;
 
     // Notify post owner
-    if (postOwnerId !== userId) {
-      const notifId = uuidv4();
-      await query(
-        `INSERT INTO notifications (id, recipient_id, actor_id, type, post_id)
-         VALUES ($1, $2, $3, 'comment', $4)`,
-        [notifId, postOwnerId, userId, postId]
-      );
-      try {
-        emitNotification(postOwnerId, {
-          id: notifId,
-          type: 'comment',
-          post_id: postId,
-          actor: { id: req.user.id, username: req.user.username },
-          created_at: new Date(),
-        });
-      } catch (_) {}
+    if (postOwnerId !== user.id) {
+      const notifId = crypto.randomUUID();
+      await db`
+        INSERT INTO notifications (id, recipient_id, actor_id, type, post_id)
+        VALUES (${notifId}, ${postOwnerId}, ${user.id}, 'comment', ${postId})
+      `;
     }
 
-    res.status(201).json(comment);
+    return c.json({ ...comment, author_id: user.id, username: user.username }, 201);
   } catch (err) {
-    if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors });
+    if (err instanceof z.ZodError) return c.json({ error: err.errors }, 400);
     console.error(err);
-    res.status(500).json({ error: 'Failed to add comment' });
+    return c.json({ error: 'Failed to add comment' }, 500);
+  } finally {
+    await db.end();
   }
 });
 
-// ─── GET /api/comments/:postId ─────────────────────────────────
-router.get('/:postId', async (req, res) => {
+// ─── GET /api/comments/:postId ──────────────────────────────────────────────
+comments.get('/:postId', async (c) => {
+  const db = createDb(c.env);
   try {
-    const { rows } = await query(
-      `SELECT c.id, c.body, c.created_at,
-              u.id AS author_id, u.username, u.avatar_url
-       FROM comments c
-       JOIN users u ON u.id = c.user_id
-       WHERE c.post_id = $1
-       ORDER BY c.created_at ASC`,
-      [req.params.postId]
-    );
-    res.json(rows);
+    const rows = await db`
+      SELECT c.id, c.body, c.created_at,
+             u.id AS author_id, u.username, u.avatar_url
+      FROM comments c
+      JOIN users u ON u.id = c.user_id
+      WHERE c.post_id = ${c.req.param('postId')}
+      ORDER BY c.created_at ASC
+    `;
+    return c.json(rows);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch comments' });
+    return c.json({ error: 'Failed to fetch comments' }, 500);
+  } finally {
+    await db.end();
   }
 });
 
-// ─── DELETE /api/comments/:id ──────────────────────────────────
-router.delete('/:id', authenticate, async (req, res) => {
+// ─── DELETE /api/comments/:id ───────────────────────────────────────────────
+comments.delete('/:id', authenticate, async (c) => {
+  const db = createDb(c.env);
   try {
-    const { rows } = await query('SELECT user_id FROM comments WHERE id = $1', [req.params.id]);
-    if (!rows[0]) return res.status(404).json({ error: 'Comment not found' });
-    if (rows[0].user_id !== req.user.id) return res.status(403).json({ error: 'Not authorized' });
-    await query('DELETE FROM comments WHERE id = $1', [req.params.id]);
-    res.json({ message: 'Comment deleted' });
+    const rows = await db`SELECT user_id FROM comments WHERE id = ${c.req.param('id')}`;
+    if (!rows[0]) return c.json({ error: 'Comment not found' }, 404);
+    if (rows[0].user_id !== c.get('user').id) return c.json({ error: 'Not authorized' }, 403);
+    await db`DELETE FROM comments WHERE id = ${c.req.param('id')}`;
+    return c.json({ message: 'Comment deleted' });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to delete comment' });
+    return c.json({ error: 'Failed to delete comment' }, 500);
+  } finally {
+    await db.end();
   }
 });
 
-module.exports = router;
+export default comments;

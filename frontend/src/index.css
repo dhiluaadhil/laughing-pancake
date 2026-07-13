@@ -2,32 +2,32 @@
 
 /* ─── CSS Variables ─────────────────────────────── */
 :root {
-  --bg-primary:   #0a0a0f;
-  --bg-secondary: #111118;
-  --bg-card:      #16161f;
-  --bg-glass:     rgba(22, 22, 31, 0.8);
-  --bg-hover:     #1e1e2a;
+  --bg-primary: #000000;
+  --bg-secondary: #0a0a0a;
+  --bg-card: #121212;
+  --bg-glass: rgba(0, 0, 0, 0.85);
+  --bg-hover: #1a1a1a;
 
-  --border:       rgba(255,255,255,0.07);
-  --border-focus: rgba(99, 102, 241, 0.6);
+  --border: rgba(255,255,255,0.12);
+  --border-focus: rgba(255, 255, 255, 0.5);
 
-  --accent:       #6366f1;
-  --accent-hover: #818cf8;
-  --accent-dim:   rgba(99, 102, 241, 0.15);
-  --accent-glow:  rgba(99, 102, 241, 0.3);
+  --accent: #ffffff;
+  --accent-hover: #e5e5e5;
+  --accent-dim: rgba(255, 255, 255, 0.08);
+  --accent-glow: rgba(255, 255, 255, 0.15);
 
-  --text-primary:   #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted:     #475569;
+  --text-primary: #ffffff;
+  --text-secondary: #a3a3a3;
+  --text-muted: #737373;
 
   --success: #10b981;
   --danger:  #ef4444;
   --warning: #f59e0b;
 
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
-  --radius-xl: 28px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
 
   --shadow-sm:  0 1px 3px rgba(0,0,0,0.4);
   --shadow-md:  0 4px 16px rgba(0,0,0,0.5);
@@ -100,13 +100,13 @@ h3 { font-size: 1rem;    font-weight: 600; }
 
 .btn-primary {
   background: var(--accent);
-  color: #fff;
+  color: var(--bg-primary);
   box-shadow: var(--shadow-accent);
 }
 .btn-primary:hover {
   background: var(--accent-hover);
   transform: translateY(-1px);
-  box-shadow: 0 0 30px rgba(99,102,241,0.4);
+  
 }
 
 .btn-ghost {
@@ -255,8 +255,8 @@ textarea.form-input { resize: vertical; min-height: 100px; }
   transition: all var(--transition);
 }
 .action-btn:hover { color: var(--accent); background: var(--accent-dim); }
-.action-btn.liked  { color: #ef4444; }
-.action-btn.liked:hover { color: #ef4444; background: rgba(239,68,68,0.1); }
+.action-btn.liked  { color: var(--text-primary); }
+.action-btn.liked:hover { color: var(--text-primary); background: var(--bg-hover); }
 
 /* ─── Avatar ─────────────────────────────────────── */
 .avatar {
@@ -272,8 +272,8 @@ textarea.form-input { resize: vertical; min-height: 100px; }
   justify-content: center;
   font-weight: 700;
   flex-shrink: 0;
-  background: linear-gradient(135deg, var(--accent), #a855f7);
-  color: #fff;
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  color: var(--bg-primary);
   border: 2px solid var(--border);
   font-size: 0.85em;
 }
@@ -295,7 +295,7 @@ textarea.form-input { resize: vertical; min-height: 100px; }
 .nav-brand {
   font-size: 1.3rem;
   font-weight: 800;
-  background: linear-gradient(135deg, var(--accent), #a855f7);
+  background: var(--bg-secondary); border: 1px solid var(--border);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -335,7 +335,7 @@ textarea.form-input { resize: vertical; min-height: 100px; }
   top: 50%;
   transform: translateY(-50%);
   background: var(--accent);
-  color: #fff;
+  color: var(--bg-primary);
   font-size: 0.7rem;
   font-weight: 700;
   padding: 2px 7px;
@@ -356,28 +356,32 @@ textarea.form-input { resize: vertical; min-height: 100px; }
 /* ─── Tabs ───────────────────────────────────────── */
 .tabs {
   display: flex;
-  border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
-  background: var(--bg-primary);
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
   z-index: 10;
+  gap: 8px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
 }
 
 .tab-btn {
-  flex: 1;
-  padding: 16px;
+  flex: none;
+  padding: 8px 16px;
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-muted);
   text-align: center;
-  border-bottom: 2px solid transparent;
+  border-radius: 40px;
+  border: 1px solid transparent;
   transition: all var(--transition);
 }
 .tab-btn.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
+  background: var(--text-primary);
+  color: var(--bg-primary);
 }
-.tab-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
+.tab-btn:hover:not(.active) { color: var(--text-primary); background: var(--bg-hover); }
 
 /* ─── Page Header ────────────────────────────────── */
 .page-header {
@@ -408,7 +412,7 @@ textarea.form-input { resize: vertical; min-height: 100px; }
 .tag-pill:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
 .tag-pill.selected {
   background: var(--accent);
-  color: #fff;
+  color: var(--bg-primary);
   border-color: var(--accent);
   box-shadow: var(--shadow-accent);
 }
@@ -437,7 +441,7 @@ textarea.form-input { resize: vertical; min-height: 100px; }
 .auth-logo {
   font-size: 2rem;
   font-weight: 800;
-  background: linear-gradient(135deg, var(--accent), #a855f7, #ec4899);
+  background: var(--text-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -518,7 +522,7 @@ textarea.form-input { resize: vertical; min-height: 100px; }
 }
 .club-banner {
   height: 100px;
-  background: linear-gradient(135deg, var(--accent), #a855f7);
+  background: var(--bg-secondary); border: 1px solid var(--border);
   object-fit: cover;
   width: 100%;
 }
@@ -527,7 +531,7 @@ textarea.form-input { resize: vertical; min-height: 100px; }
 /* ─── Profile Header ─────────────────────────────── */
 .profile-banner {
   height: 200px;
-  background: linear-gradient(135deg, #1e1b4b, #4c1d95, #1e1b4b);
+  background: var(--bg-secondary); border-bottom: 1px solid var(--border);
   position: relative;
 }
 .profile-avatar-wrap {
@@ -644,7 +648,54 @@ textarea.form-input { resize: vertical; min-height: 100px; }
   .page-layout { grid-template-columns: 220px 1fr 260px; }
 }
 @media (max-width: 900px) {
-  .page-layout, .page-layout.no-sidebar { grid-template-columns: 1fr; }
+  .page-layout, .page-layout.no-sidebar { grid-template-columns: 1fr; padding-bottom: 70px; }
   .sidebar { display: none; }
   .right-sidebar { display: none; }
+}
+
+/* ─── Bottom Navigation ──────────────────────────── */
+.bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border);
+  z-index: 100;
+  padding: 10px 20px;
+  padding-bottom: env(safe-area-inset-bottom, 10px);
+}
+
+@media (max-width: 900px) {
+  .bottom-nav { display: flex; justify-content: space-around; align-items: center; }
+}
+
+.bottom-nav-link {
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  position: relative;
+  transition: color var(--transition);
+}
+.bottom-nav-link:hover, .bottom-nav-link.active {
+  color: var(--text-primary);
+}
+.bottom-nav-link .badge {
+  position: absolute;
+  top: -4px;
+  right: -8px;
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 20px;
+  min-width: 18px;
+  text-align: center;
 }

@@ -1,75 +1,64 @@
-const express = require('express');
-const { v4: uuidv4 } = require('uuid');
-const { query } = require('../db');
-const { authenticate } = require('../middleware/auth');
-const { emitNotification } = require('../socket');
+import { Hono } from 'hono';
+import { createDb } from '../db.js';
+import { authenticate } from '../middleware/auth.js';
 
-const router = express.Router();
+const likes = new Hono();
 
-// ─── POST /api/likes/:postId ───────────────────────────────────
-router.post('/:postId', authenticate, async (req, res) => {
+// ─── POST /api/likes/:postId ────────────────────────────────────────────────
+likes.post('/:postId', authenticate, async (c) => {
+  const db = createDb(c.env);
   try {
-    const { postId } = req.params;
-    const userId = req.user.id;
+    const postId = c.req.param('postId');
+    const user = c.get('user');
 
-    // Check post exists and get owner
-    const postRes = await query('SELECT user_id FROM posts WHERE id = $1', [postId]);
-    if (!postRes.rows[0]) return res.status(404).json({ error: 'Post not found' });
-    const postOwnerId = postRes.rows[0].user_id;
+    const postRes = await db`SELECT user_id FROM posts WHERE id = ${postId}`;
+    if (!postRes[0]) return c.json({ error: 'Post not found' }, 404);
+    const postOwnerId = postRes[0].user_id;
 
-    await query(
-      'INSERT INTO likes (user_id, post_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-      [userId, postId]
-    );
+    await db`
+      INSERT INTO likes (user_id, post_id) VALUES (${user.id}, ${postId})
+      ON CONFLICT DO NOTHING
+    `;
 
-    // Send notification to post owner (not to self)
-    if (postOwnerId !== userId) {
-      const notifId = uuidv4();
-      await query(
-        `INSERT INTO notifications (id, recipient_id, actor_id, type, post_id)
-         VALUES ($1, $2, $3, 'like', $4)`,
-        [notifId, postOwnerId, userId, postId]
-      );
-      try {
-        emitNotification(postOwnerId, {
-          id: notifId,
-          type: 'like',
-          post_id: postId,
-          actor: { id: req.user.id, username: req.user.username },
-          created_at: new Date(),
-        });
-      } catch (_) {}
+    // Notify post owner (not self)
+    if (postOwnerId !== user.id) {
+      const notifId = crypto.randomUUID();
+      await db`
+        INSERT INTO notifications (id, recipient_id, actor_id, type, post_id)
+        VALUES (${notifId}, ${postOwnerId}, ${user.id}, 'like', ${postId})
+      `;
     }
 
-    // Return updated like count
-    const countRes = await query(
-      'SELECT COUNT(*)::int AS like_count FROM likes WHERE post_id = $1',
-      [postId]
-    );
-    res.json({ liked: true, like_count: countRes.rows[0].like_count });
+    const [countRow] = await db`
+      SELECT COUNT(*)::int AS like_count FROM likes WHERE post_id = ${postId}
+    `;
+    return c.json({ liked: true, like_count: countRow.like_count });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to like post' });
+    return c.json({ error: 'Failed to like post' }, 500);
+  } finally {
+    await db.end();
   }
 });
 
-// ─── DELETE /api/likes/:postId ─────────────────────────────────
-router.delete('/:postId', authenticate, async (req, res) => {
+// ─── DELETE /api/likes/:postId ──────────────────────────────────────────────
+likes.delete('/:postId', authenticate, async (c) => {
+  const db = createDb(c.env);
   try {
-    const { postId } = req.params;
-    await query(
-      'DELETE FROM likes WHERE user_id = $1 AND post_id = $2',
-      [req.user.id, postId]
-    );
-    const countRes = await query(
-      'SELECT COUNT(*)::int AS like_count FROM likes WHERE post_id = $1',
-      [postId]
-    );
-    res.json({ liked: false, like_count: countRes.rows[0].like_count });
+    const postId = c.req.param('postId');
+    await db`
+      DELETE FROM likes WHERE user_id = ${c.get('user').id} AND post_id = ${postId}
+    `;
+    const [countRow] = await db`
+      SELECT COUNT(*)::int AS like_count FROM likes WHERE post_id = ${postId}
+    `;
+    return c.json({ liked: false, like_count: countRow.like_count });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to unlike post' });
+    return c.json({ error: 'Failed to unlike post' }, 500);
+  } finally {
+    await db.end();
   }
 });
 
-module.exports = router;
+export default likes;

@@ -1,13 +1,23 @@
 # Backend
 backend/node_modules/
 backend/.env
+backend/.dev.vars
 backend/runschema.js
+backend/.wrangler/
+
+# Django Backend
+backend-django/venv/
+backend-django/db.sqlite3
+backend-django/__pycache__/
+backend-django/**/*.pyc
+backend-django/.env
 
 # Frontend
 frontend/node_modules/
 frontend/dist/
 frontend/.env
 frontend/.env.local
+frontend/.env.production
 
 # General
 .DS_Store

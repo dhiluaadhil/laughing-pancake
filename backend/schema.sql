@@ -9,19 +9,32 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ─────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS users (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   username    TEXT NOT NULL UNIQUE,
   email       TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   avatar_url  TEXT,
   bio         TEXT,
   college     TEXT,
+  role        TEXT NOT NULL DEFAULT 'user',
+  is_active   BOOLEAN NOT NULL DEFAULT true,
+  email_verified BOOLEAN NOT NULL DEFAULT false,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS tags (
-  id    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name  TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS email_otps (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email VARCHAR(255) NOT NULL,
+  otp_code VARCHAR(10) NOT NULL,
+  purpose VARCHAR(50) NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  used BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS user_interests (
@@ -31,7 +44,7 @@ CREATE TABLE IF NOT EXISTS user_interests (
 );
 
 CREATE TABLE IF NOT EXISTS clubs (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name        TEXT NOT NULL,
   description TEXT,
   banner_url  TEXT,
@@ -48,7 +61,7 @@ CREATE TABLE IF NOT EXISTS club_members (
 );
 
 CREATE TABLE IF NOT EXISTS posts (
-  id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   caption    TEXT NOT NULL,
   image_url  TEXT,
@@ -77,7 +90,7 @@ CREATE TABLE IF NOT EXISTS likes (
 );
 
 CREATE TABLE IF NOT EXISTS comments (
-  id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   post_id    UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
   body       TEXT NOT NULL,
@@ -85,7 +98,7 @@ CREATE TABLE IF NOT EXISTS comments (
 );
 
 CREATE TABLE IF NOT EXISTS notifications (
-  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   recipient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   actor_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   type         TEXT NOT NULL, -- 'like' | 'comment' | 'follow'

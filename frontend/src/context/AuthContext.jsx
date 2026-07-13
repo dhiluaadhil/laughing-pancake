@@ -24,17 +24,26 @@ export function AuthProvider({ children }) {
     localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(userData));
   }, []);
 
-  const login = useCallback(async (email, password) => {
-    const { data } = await api.post('/auth/login', { email, password });
-    saveSession(data.user, data.token);
-    return data.user;
+  const login = useCallback(async (username, password) => {
+    // Django REST simplejwt expects 'username', and returns { access, refresh }
+    const { data: tokenData } = await api.post('/auth/login/', { username, password });
+    
+    // Temporarily set token in localStorage so the next request uses it
+    localStorage.setItem(STORAGE_KEY_TOKEN, tokenData.access);
+    
+    // Fetch the authenticated user's details
+    const { data: userData } = await api.get('/users/me/');
+    
+    saveSession(userData, tokenData.access);
+    return userData;
   }, [saveSession]);
 
   const register = useCallback(async (payload) => {
-    const { data } = await api.post('/auth/register', payload);
-    saveSession(data.user, data.token);
-    return data.user;
-  }, [saveSession]);
+    const { data: userData } = await api.post('/users/', payload);
+    // After registration, typically we'd login automatically or require login
+    // Let's just login for them
+    return login(payload.username || payload.email, payload.password);
+  }, [login]);
 
   const logout = useCallback(() => {
     setUser(null);

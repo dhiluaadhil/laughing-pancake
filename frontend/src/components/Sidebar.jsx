@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import Avatar from './Avatar';
 import {
   FiHome, FiSearch, FiBell, FiUsers, FiUser,
-  FiLogOut, FiPlusSquare
+  FiLogOut, FiPlusSquare, FiShield
 } from 'react-icons/fi';
 
 export default function LeftSidebar({ unreadCount = 0 }) {
@@ -26,8 +26,13 @@ export default function LeftSidebar({ unreadCount = 0 }) {
     { path: `/profile/${user?.username}`, icon: <FiUser size={20} />, label: 'Profile' },
   ];
 
+  if (user?.role === 'admin') {
+    navItems.push({ path: '/admin', icon: <FiShield size={20} />, label: 'Admin Panel' });
+  }
+
   return (
-    <aside className="sidebar">
+    <>
+      <aside className="sidebar">
       <Link to="/" className="nav-brand" style={{ display: 'block', padding: '4px 16px' }}>
         CampusLink
       </Link>
@@ -63,6 +68,21 @@ export default function LeftSidebar({ unreadCount = 0 }) {
           </button>
         </div>
       </div>
-    </aside>
+      </aside>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="bottom-nav">
+        {navItems.map(({ path, icon, badge }) => (
+          <Link
+            key={path}
+            to={path}
+            className={`bottom-nav-link ${isActive(path) ? 'active' : ''}`}
+          >
+            {icon}
+            {badge > 0 && <span className="badge">{badge > 99 ? '99+' : badge}</span>}
+          </Link>
+        ))}
+      </nav>
+    </>
   );
 }

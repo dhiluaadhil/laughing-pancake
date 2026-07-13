@@ -9,9 +9,12 @@ import { useState } from 'react';
 // Pages
 import Register     from './pages/Register';
 import Login        from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
 import Home         from './pages/Home';
 import Profile      from './pages/Profile';
 import PostDetail   from './pages/PostDetail';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminRoute from './components/AdminRoute';
 import Clubs        from './pages/Clubs';
 import ClubDetail   from './pages/ClubDetail';
 import Search       from './pages/Search';
@@ -40,11 +43,13 @@ function AppInner() {
       {/* Public */}
       <Route path="/login"    element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
 
       {/* Protected */}
       <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
       <Route path="/profile/:username" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="/post/:id" element={<ProtectedRoute><PostDetail /></ProtectedRoute>} />
+      <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
       <Route path="/clubs"    element={<ProtectedRoute><Clubs /></ProtectedRoute>} />
       <Route path="/clubs/:id" element={<ProtectedRoute><ClubDetail /></ProtectedRoute>} />
       <Route path="/search"   element={<ProtectedRoute><Search /></ProtectedRoute>} />

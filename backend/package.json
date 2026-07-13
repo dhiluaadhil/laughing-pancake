@@ -1,26 +1,22 @@
 {
   "name": "campuslink-backend",
   "version": "1.0.0",
-  "description": "CampusLink backend API",
-  "main": "index.js",
+  "description": "CampusLink backend API — Cloudflare Workers",
+  "type": "module",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "cf-typegen": "wrangler types"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
-    "bcryptjs": "^2.4.3",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "jsonwebtoken": "^9.0.2",
-    "multer": "^1.4.5-lts.1",
-    "pg": "^8.11.3",
-    "socket.io": "^4.7.2",
-    "uuid": "^9.0.0",
+    "hono": "^4.4.0",
+    "jose": "^5.2.4",
+    "postgres": "^3.4.3",
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "@cloudflare/workers-types": "^4.20260608.1",
+    "wrangler": "^4.98.0"
   }
 }

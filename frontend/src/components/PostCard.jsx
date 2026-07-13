@@ -58,7 +58,7 @@ export default function PostCard({ post, onDelete }) {
             {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
           </div>
         </div>
-        {user?.id === post.author_id && (
+        {(user?.id === post.author_id || user?.role === 'admin') && (
           <button
             className="action-btn"
             onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(); }}

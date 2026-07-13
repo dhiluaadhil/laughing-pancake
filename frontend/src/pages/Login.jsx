@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 export default function Login() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: '', password: '' });
+  const [form, setForm] = useState({ username: '', password: '' });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => { if (isAuthenticated) navigate('/'); }, [isAuthenticated]);
@@ -15,10 +15,10 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.email || !form.password) return toast.error('Fill in all fields');
+    if (!form.username || !form.password) return toast.error('Fill in all fields');
     setLoading(true);
     try {
-      await login(form.email, form.password);
+      await login(form.username, form.password);
       toast.success('Welcome back! 👋');
       navigate('/');
     } catch (err) {
@@ -37,14 +37,14 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
-            <label className="form-label">Email</label>
+            <label className="form-label">Username</label>
             <input
               className="form-input"
-              type="email"
-              placeholder="you@university.edu"
-              value={form.email}
-              onChange={set('email')}
-              autoComplete="email"
+              type="text"
+              placeholder="Your username"
+              value={form.username}
+              onChange={set('username')}
+              autoComplete="username"
             />
           </div>
 
@@ -58,6 +58,9 @@ export default function Login() {
               onChange={set('password')}
               autoComplete="current-password"
             />
+            <div style={{ textAlign: 'right', marginTop: '4px' }}>
+              <Link to="/forgot-password" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Forgot Password?</Link>
+            </div>
           </div>
 
           <button type="submit" className="btn btn-primary btn-full btn-lg" disabled={loading}>
@@ -74,7 +77,7 @@ export default function Login() {
           borderRadius: 'var(--radius-md)', border: '1px solid var(--border)',
           fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center',
         }}>
-          🎓 Only college email addresses (.edu) are accepted
+          🎓 Only @gmail.com addresses are currently accepted
         </div>
       </div>
     </div>

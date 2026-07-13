@@ -1,0 +1,5 @@
+name = "campuslink-frontend"
+pages_build_output_dir = "dist"
+
+[vars]
+VITE_API_URL = "https://campuslink-backend.aadhil.workers.dev"

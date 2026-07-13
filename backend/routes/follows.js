@@ -1,79 +1,141 @@
-const express = require('express');
-const { v4: uuidv4 } = require('uuid');
-const { query } = require('../db');
-const { authenticate } = require('../middleware/auth');
-const { emitNotification } = require('../socket');
+import { Hono } from 'hono';
+import { createDb } from '../db.js';
+import { authenticate } from '../middleware/auth.js';
 
-const router = express.Router();
+const follows = new Hono();
 
-// ─── POST /api/follows/:id ─────────────────────────────────────
-router.post('/:id', authenticate, async (req, res) => {
+// ─── POST /api/follows/:id ──────────────────────────────────────────────────
+follows.post('/:id', authenticate, async (c) => {
+  const db = createDb(c.env);
   try {
-    const followingId = req.params.id;
-    const followerId = req.user.id;
+    const followingId = c.req.param('id');
+    const followerId = c.get('user').id;
 
     if (followingId === followerId) {
-      return res.status(400).json({ error: 'Cannot follow yourself' });
+      return c.json({ error: 'Cannot follow yourself' }, 400);
     }
 
-    // Check target user exists
-    const target = await query('SELECT id, username FROM users WHERE id = $1', [followingId]);
-    if (!target.rows[0]) return res.status(404).json({ error: 'User not found' });
+    const target = await db`SELECT id, username FROM users WHERE id = ${followingId}`;
+    if (!target[0]) return c.json({ error: 'User not found' }, 404);
 
-    await query(
-      'INSERT INTO follows (follower_id, following_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-      [followerId, followingId]
-    );
+    await db`
+      INSERT INTO follows (follower_id, following_id)
+      VALUES (${followerId}, ${followingId})
+      ON CONFLICT DO NOTHING
+    `;
 
-    // Create + emit notification
-    const notifId = uuidv4();
-    await query(
-      `INSERT INTO notifications (id, recipient_id, actor_id, type)
-       VALUES ($1, $2, $3, 'follow')`,
-      [notifId, followingId, followerId]
-    );
+    // Persist notification
+    const notifId = crypto.randomUUID();
+    await db`
+      INSERT INTO notifications (id, recipient_id, actor_id, type)
+      VALUES (${notifId}, ${followingId}, ${followerId}, 'follow_request')
+    `;
 
-    try {
-      emitNotification(followingId, {
-        id: notifId,
-        type: 'follow',
-        actor: { id: req.user.id, username: req.user.username },
-        created_at: new Date(),
-      });
-    } catch (_) {}
-
-    res.json({ message: `Now following ${target.rows[0].username}` });
+    return c.json({ message: `Requested to follow ${target[0].username}` });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Follow failed' });
+    return c.json({ error: 'Follow failed' }, 500);
+  } finally {
+    await db.end();
   }
 });
 
-// ─── DELETE /api/follows/:id ───────────────────────────────────
-router.delete('/:id', authenticate, async (req, res) => {
+// ─── DELETE /api/follows/:id ────────────────────────────────────────────────
+follows.delete('/:id', authenticate, async (c) => {
+  const db = createDb(c.env);
   try {
-    await query(
-      'DELETE FROM follows WHERE follower_id = $1 AND following_id = $2',
-      [req.user.id, req.params.id]
-    );
-    res.json({ message: 'Unfollowed' });
+    await db`
+      DELETE FROM follows
+      WHERE follower_id = ${c.get('user').id} AND following_id = ${c.req.param('id')}
+    `;
+    return c.json({ message: 'Unfollowed' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Unfollow failed' });
+    return c.json({ error: 'Unfollow failed' }, 500);
+  } finally {
+    await db.end();
   }
 });
 
-// Check if current user follows target
-router.get('/check/:id', authenticate, async (req, res) => {
+// ─── GET /api/follows/check/:id ─────────────────────────────────────────────
+follows.get('/check/:id', authenticate, async (c) => {
+  const db = createDb(c.env);
   try {
-    const { rows } = await query(
-      'SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = $2',
-      [req.user.id, req.params.id]
-    );
-    res.json({ following: rows.length > 0 });
+    const rows = await db`
+      SELECT status FROM follows
+      WHERE follower_id = ${c.get('user').id} AND following_id = ${c.req.param('id')}
+    `;
+    const status = rows.length > 0 ? rows[0].status : 'none';
+    return c.json({ following: status === 'accepted', status });
   } catch (err) {
-    res.status(500).json({ error: 'Check failed' });
+    return c.json({ error: 'Check failed' }, 500);
+  } finally {
+    await db.end();
   }
 });
 
-module.exports = router;
+// ─── POST /api/follows/accept/:followerId ───────────────────────────────────
+follows.post('/accept/:followerId', authenticate, async (c) => {
+  const db = createDb(c.env);
+  try {
+    const followingId = c.get('user').id;
+    const followerId = c.req.param('followerId');
+
+    const [updated] = await db`
+      UPDATE follows SET status = 'accepted'
+      WHERE follower_id = ${followerId} AND following_id = ${followingId}
+      RETURNING *
+    `;
+
+    if (!updated) return c.json({ error: 'Follow request not found' }, 404);
+
+    // Persist notification to tell them they were accepted
+    const notifId = crypto.randomUUID();
+    await db`
+      INSERT INTO notifications (id, recipient_id, actor_id, type)
+      VALUES (${notifId}, ${followerId}, ${followingId}, 'follow_accepted')
+    `;
+
+    // Optionally mark the follow_request notification as read
+    await db`
+      UPDATE notifications SET read = TRUE
+      WHERE recipient_id = ${followingId} AND actor_id = ${followerId} AND type = 'follow_request'
+    `;
+
+    return c.json({ message: 'Follow request accepted' });
+  } catch (err) {
+    console.error(err);
+    return c.json({ error: 'Failed to accept follow' }, 500);
+  } finally {
+    await db.end();
+  }
+});
+
+// ─── POST /api/follows/decline/:followerId ──────────────────────────────────
+follows.post('/decline/:followerId', authenticate, async (c) => {
+  const db = createDb(c.env);
+  try {
+    const followingId = c.get('user').id;
+    const followerId = c.req.param('followerId');
+
+    await db`
+      DELETE FROM follows
+      WHERE follower_id = ${followerId} AND following_id = ${followingId} AND status = 'pending'
+    `;
+
+    // Mark the notification as read so it goes away
+    await db`
+      UPDATE notifications SET read = TRUE
+      WHERE recipient_id = ${followingId} AND actor_id = ${followerId} AND type = 'follow_request'
+    `;
+
+    return c.json({ message: 'Follow request declined' });
+  } catch (err) {
+    console.error(err);
+    return c.json({ error: 'Failed to decline follow' }, 500);
+  } finally {
+    await db.end();
+  }
+});
+
+export default follows;

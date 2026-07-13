@@ -1,0 +1,25 @@
+name = "campuslink-backend"
+main = "index.js"
+compatibility_date = "2024-03-04"
+compatibility_flags = ["nodejs_compat"]
+
+# ─── Secrets (set via: wrangler secret put <KEY>) ─────────────────────────────
+# JWT_SECRET
+# SUPABASE_URL
+# SUPABASE_ANON_KEY
+# ALLOWED_DOMAINS (optional, defaults to .edu)
+
+[vars]
+NODE_ENV = "production"
+CLIENT_URL = "https://campuslink-frontend.pages.dev"
+
+# ─── Hyperdrive (Postgres proxy) ───────────────────────────────────────────────
+# 1. Create a Hyperdrive config in the Cloudflare dashboard:
+#    https://dash.cloudflare.com → Workers & Pages → Hyperdrive → Create
+# 2. Paste your Postgres connection string (Neon.tech / Supabase DB / etc.)
+# 3. Copy the generated ID and paste it below.
+#
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "99614f3fbbd94d79acbe7c34174e1ff0"
+localConnectionString = "postgresql://neondb_owner:npg_PdlGnho9qKM8@ep-green-thunder-aqacigaj.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require"
